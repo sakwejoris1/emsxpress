@@ -15,3 +15,4 @@ Responsive shipment-management frontend built with Vite, React, and TypeScript. 
 - PostgreSQL data models are defined in `prisma/schema.prisma`. Set `DATABASE_URL` from `.env.example` before connecting a database.
 
 Authentication, persistence, carrier APIs, label/PDF generation, and production server actions still require service credentials and backend implementation.
+# emsxpress
