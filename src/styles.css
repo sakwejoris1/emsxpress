@@ -12,6 +12,8 @@
 .nav-links a{border:0;background:none;color:#45546b;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;padding:10px 0}.nav-links a:hover{color:#2864e8}@media(max-width:900px){.nav-links a{font-size:10px}}@media(max-width:680px){.nav-links a{font-size:12px;padding:12px 0;border-bottom:1px solid #edf0f4}}
 
 /* EMSXpress refresh */
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .services-grid{grid-template-columns:repeat(3,1fr)}
 .hero-bullets{display:flex;gap:18px;flex-wrap:wrap;margin-top:28px;font-size:10px;color:#c9d6ea}
 .hero-bullets span{display:flex;align-items:center;gap:6px}
