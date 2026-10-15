@@ -1,4 +1,8 @@
 /* Keep a clear, familiar hierarchy across the public site and portal. */
+body {
+  font-size: 16px;
+}
+
 .fc-site h1,
 .fc-site h2,
 .fc-site h3,
@@ -50,4 +54,53 @@
 .fc-site .fc-footer-col > b,
 .fc-site .fc-resource b {
   font-weight: 600;
+}
+
+/* Keep supporting copy and controls readable at normal browser zoom. */
+.fc-site p,
+.portal-main p,
+.portal-main .all-service-card p,
+.portal-main .service-callout p,
+.portal-main .faq-intro p,
+.portal-main .help-faq p {
+  font-size: clamp(14px, 1vw, 16px) !important;
+  line-height: 1.65;
+}
+
+.fc-site .fc-nav a,
+.fc-site .fc-login,
+.fc-site .fc-ship-btn,
+.fc-site .fc-track-card,
+.fc-site .fc-stats span,
+.fc-site .fc-service-info,
+.fc-site .fc-network-item,
+.fc-site .fc-journey li,
+.fc-site .fc-benefit,
+.fc-site .fc-business-features,
+.fc-site .fc-resource,
+.fc-site .fc-help,
+.fc-site .fc-footer,
+.portal-main button,
+.portal-main a,
+.portal-main label,
+.portal-main input,
+.portal-main select,
+.portal-main textarea {
+  font-size: max(14px, 1em);
+}
+
+.fc-site :is(small, .fc-kicker, .fc-footer-col > b, .fc-footer-bottom),
+.portal-main :is(small, .eyebrow, .metric small, .eyebrow-icon) {
+  font-size: max(12px, 0.75rem);
+}
+
+@media (max-width: 680px) {
+  .fc-site p,
+  .portal-main p,
+  .portal-main .all-service-card p,
+  .portal-main .service-callout p,
+  .portal-main .faq-intro p,
+  .portal-main .help-faq p {
+    font-size: 15px !important;
+  }
 }
