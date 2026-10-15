@@ -1,2 +1,8 @@
-.node_modulenode_modules/
-node_modules
+node_modules/
+dist/
+.vercel/
+.DS_Store
+*.tsbuildinfo
+.env
+.env.*
+!.env.example

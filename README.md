@@ -1,6 +1,6 @@
 # EMSXpress
 
-Responsive shipment-management frontend built with Vite, React, and TypeScript. The UI includes the public landing page plus dedicated `/services`, `/track`, `/track/:trackingNumber`, `/quote`, `/locations`, `/dashboard`, `/help`, `/contact`, and `/faqs` views.
+Responsive shipment-management frontend built with Vite, React, and TypeScript. The UI includes the landing page plus `/shipping`, `/tracking`, `/tracking/:trackingNumber`, `/services`, `/quote`, `/locations`, `/dashboard`, `/help`, `/contact`, `/faqs`, `/about`, and `/register` views.
 
 ## Run locally
 
@@ -15,4 +15,19 @@ Responsive shipment-management frontend built with Vite, React, and TypeScript. 
 - PostgreSQL data models are defined in `prisma/schema.prisma`. Set `DATABASE_URL` from `.env.example` before connecting a database.
 
 Authentication, persistence, carrier APIs, label/PDF generation, and production server actions still require service credentials and backend implementation.
+
+## Deploy to Vercel
+
+The project is configured for Vercel in `vercel.json`. It builds with `npm run build` into `dist`, and rewrites direct route requests to the SPA entry so URLs such as `/tracking` and `/locations` work after refresh.
+
+### Git-based deployment
+
+1. Push this repository to GitHub.
+2. In Vercel, choose **Add New → Project** and import the `emsxpress` repository.
+3. Keep the detected Vite settings: build command `npm run build`, output directory `dist`, install command `npm install`.
+4. Deploy. No environment variables are needed for this frontend-only deployment.
+
+### CLI deployment
+
+Run `npx vercel` to link the local project and create a preview deployment. After signing in and reviewing the preview, run `npx vercel --prod` to publish it.
 # emsxpress
