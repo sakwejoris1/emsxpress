@@ -3,6 +3,7 @@ import { PageFrame } from './Layout'
 import ShippingPage from './pages/ShippingPage'
 import RegisterPage from './pages/RegisterPage'
 import AboutPage from './pages/AboutPage'
+import AdminPage from './pages/AdminPage'
 import { ArrowRight, BadgeCheck, Box, Building2, Check, ChevronRight, Clock3, Download, FileUp, Globe2, Headphones, MapPin, PackageCheck, Plane, Search, ShieldCheck, Ship, Truck, X } from 'lucide-react'
 
 type TrackingEvent = { id: string; status: string; location: string; facility: string | null; description: string; latitude: number | null; longitude: number | null; timestamp: string }
@@ -145,6 +146,7 @@ function HelpPage() {
 
 export default function RoutePages() {
   const path = window.location.pathname.replace(/\/$/, '')
+  if (path === '/admin') return <AdminPage/>
   if (path === '/tracking' || path.startsWith('/tracking/')) return <TrackPage/>
   if (path === '/quote' || path === '/ship') return <QuotePage/>
   if (path === '/shipping') return <ShippingPage/>

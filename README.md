@@ -1,6 +1,6 @@
 # EMSXpress
 
-Responsive shipment-management frontend built with Vite, React, and TypeScript. The UI includes the landing page plus `/shipping`, `/tracking`, `/tracking/:trackingNumber`, `/services`, `/quote`, `/locations`, `/dashboard`, `/help`, `/contact`, `/faqs`, `/about`, and `/register` views.
+Responsive shipment-management frontend built with Vite, React, and TypeScript. The UI includes the landing page plus `/shipping`, `/tracking`, `/tracking/:trackingNumber`, `/services`, `/quote`, `/locations`, `/dashboard`, `/admin`, `/help`, `/contact`, `/faqs`, `/about`, and `/register` views.
 
 ## Run locally
 
@@ -13,6 +13,8 @@ Responsive shipment-management frontend built with Vite, React, and TypeScript. 
 - `GET /api/track?numbers=EMS-2048-7319` returns shipment status and scan history from PostgreSQL. Up to 10 comma- or newline-separated numbers are accepted.
 - The tracking page refreshes the latest scan every 30 seconds and displays its coordinates on an interactive OpenStreetMap map. The map follows recorded scan coordinates; continuous vehicle GPS requires a connected carrier or device feed.
 - `POST /api/dispatch/shipments` creates a shipment, and `POST /api/dispatch/events` records a new scan. Both require the `x-dispatch-key` header matching the server-only `DISPATCH_API_KEY` environment variable.
+- `/admin` is the operations console. It shows live shipment counts and records, lets administrators create shipments, and publishes timestamped status and map-coordinate scans. Admin access uses an HttpOnly, eight-hour session cookie; set `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` only in server environment variables.
+- Admin JSON operations use `GET`, `POST`, and `PATCH /api/admin/shipments`; all require a valid admin session. Admin sessions are created and cleared through `POST` and `DELETE /api/admin/auth`.
 - `prisma/seed.mjs` adds the illustrative `EMS-2048-7319` sample shipment for development.
 
 ### Configure PostgreSQL and Vercel
@@ -20,10 +22,10 @@ Responsive shipment-management frontend built with Vite, React, and TypeScript. 
 1. Create a PostgreSQL database with a provider such as Neon or Supabase.
 2. Put its connection string in a local `.env` as `DATABASE_URL` (copy `.env.example`). Keep this secret out of Git.
 3. Run `npm run db:migrate` to create the tables. Optionally run `npm run db:seed` to add the sample shipment.
-4. In Vercel, open **Project → Settings → Environment Variables** and add `DATABASE_URL` and a strong random `DISPATCH_API_KEY` for Production (and Preview if needed).
+4. In Vercel, open **Project → Settings → Environment Variables** and add `DATABASE_URL`, a strong random `DISPATCH_API_KEY`, a unique `ADMIN_PASSWORD`, and a separate random `ADMIN_SESSION_SECRET` for Production (and Preview if needed).
 5. Push the app to GitHub. Vercel will rebuild and deploy the API routes with the frontend.
 
-After setting the Vercel environment variables, redeploy once so the serverless functions receive them. For an existing production database, run `npm run db:migrate` against its URL before using tracking.
+After setting the Vercel environment variables, redeploy once so the serverless functions receive them. For an existing production database, run `npm run db:migrate` against its URL before using tracking. Use `npx vercel dev` to run the admin API locally; `npm run dev` serves only the frontend.
 
 To add shipment activity, send authenticated JSON requests to `/api/dispatch/shipments` and `/api/dispatch/events`. Never expose `DISPATCH_API_KEY` in frontend code.
 
@@ -45,7 +47,7 @@ The project is configured for Vercel in `vercel.json`. It builds with `npm run b
 1. Push this repository to GitHub.
 2. In Vercel, choose **Add New → Project** and import the `emsxpress` repository.
 3. Keep the detected Vite settings: build command `npm run build`, output directory `dist`, install command `npm install`.
-4. Add `DATABASE_URL` and `DISPATCH_API_KEY` as Vercel environment variables, then deploy.
+4. Add `DATABASE_URL`, `DISPATCH_API_KEY`, `ADMIN_PASSWORD`, and `ADMIN_SESSION_SECRET` as Vercel environment variables, then deploy.
 
 ### CLI deployment
 
