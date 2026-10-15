@@ -57,10 +57,14 @@ model Shipment {
   senderAddress     String
   senderCity        String
   senderCountry     String
+  senderLatitude    Float?
+  senderLongitude   Float?
   receiverName      String
   receiverAddress   String
   receiverCity      String
   receiverCountry   String
+  receiverLatitude  Float?
+  receiverLongitude Float?
   weightKg          Float
   lengthCm          Float?
   widthCm           Float?
@@ -85,6 +89,8 @@ model TrackingEvent {
   location    String
   facility    String?
   description String
+  latitude    Float?
+  longitude   Float?
   timestamp   DateTime       @default(now())
 
   @@index([shipmentId, timestamp])

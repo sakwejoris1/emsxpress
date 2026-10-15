@@ -1,17 +1,25 @@
-import { useMemo, useState, type FormEvent, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from 'react'
 import { PageFrame } from './Layout'
 import ShippingPage from './pages/ShippingPage'
 import RegisterPage from './pages/RegisterPage'
 import AboutPage from './pages/AboutPage'
 import { ArrowRight, BadgeCheck, Box, Building2, Check, ChevronRight, Clock3, Download, FileUp, Globe2, Headphones, MapPin, PackageCheck, Plane, Search, ShieldCheck, Ship, Truck, X } from 'lucide-react'
 
-const exampleEvents = [
-  ['Shipment information received', 'New York, NY · Shipment data uploaded', 'Oct 15, 08:42'],
-  ['Collected from sender', 'Brooklyn Service Center', 'Oct 15, 11:16'],
-  ['Departed origin gateway', 'John F. Kennedy International Airport', 'Oct 15, 15:28'],
-  ['In transit to destination', 'Flight FCX 204 · New York → London', 'In progress'],
-  ['Out for delivery', 'London Delivery Depot', 'Pending'],
-]
+type TrackingEvent = { id: string; status: string; location: string; facility: string | null; description: string; latitude: number | null; longitude: number | null; timestamp: string }
+type ShipmentResult = {
+  trackingNumber: string; serviceType: string; status: string
+  senderCity: string; senderCountry: string; senderLatitude: number | null; senderLongitude: number | null
+  receiverCity: string; receiverCountry: string; receiverLatitude: number | null; receiverLongitude: number | null
+  estimatedDelivery: string | null; signedBy: string | null; deliveredAt: string | null; events: TrackingEvent[]
+}
+
+const statusLabel = (status: string) => status.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase())
+const formatDate = (date: string) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date))
+const mapUrl = (latitude: number, longitude: number) => {
+  const left = longitude - 0.55, right = longitude + 0.55
+  const bottom = Math.max(-85, latitude - 0.35), top = Math.min(85, latitude + 0.35)
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${latitude}%2C${longitude}`
+}
 
 const locations = [
   { name: 'Jersey City Service Center', address: '1200 Harbor Point Drive, Jersey City, NJ 07305', type: 'Service center', hours: 'Mon–Fri 07:00–19:00 · Sat 08:00–14:00', cutoff: 'Express cutoff 17:30', lat: 40.711, lon: -74.064 },
@@ -32,11 +40,52 @@ function TrackPage() {
   const [numbers, setNumbers] = useState(initialNumber || 'EMS-2048-7319')
   const [searched, setSearched] = useState(true)
   const [error, setError] = useState('')
+  const [shipments, setShipments] = useState<(ShipmentResult | null)[]>([])
+  const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState('')
   const trackingNumbers = useMemo(() => numbers.split(/[\n,]+/).map(n => n.trim()).filter(Boolean).slice(0, 10), [numbers])
+  const numberKey = trackingNumbers.join(',')
+  useEffect(() => {
+    if (!searched || !numberKey) { setLoading(false); return }
+    const controller = new AbortController()
+    let firstLoad = true
+    const refresh = async () => {
+      try {
+        const response = await fetch(`/api/track?numbers=${encodeURIComponent(numberKey)}`, { signal: controller.signal })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload.error || 'Tracking is temporarily unavailable.')
+        setShipments(payload.shipments)
+        setApiError('')
+      } catch (cause) {
+        if (!controller.signal.aborted) setApiError(cause instanceof Error ? cause.message : 'Could not load shipment tracking.')
+      } finally {
+        if (firstLoad) { firstLoad = false; setLoading(false) }
+      }
+    }
+    setLoading(true)
+    refresh()
+    const timer = window.setInterval(refresh, 30000)
+    return () => { controller.abort(); window.clearInterval(timer) }
+  }, [searched, numberKey])
   const submit = (e: FormEvent) => { e.preventDefault(); if (!trackingNumbers.length) { setError('Enter at least one tracking number.'); setSearched(false); return } setError(''); setSearched(true) }
   return <PageFrame eyebrow="SHIPMENT VISIBILITY" title={<>Every shipment.<br/><span>One clear picture.</span></>} description="Track one parcel or a full manifest. See scan events, delivery estimates, and exceptions in one place.">
     <form className="portal-panel track-search-panel" onSubmit={submit}><label className="portal-label" htmlFor="tracking-ids">TRACKING NUMBERS <span>Up to 10 · separate with commas or new lines</span></label><div className="portal-search-row"><textarea id="tracking-ids" value={numbers} onChange={e => setNumbers(e.target.value)} placeholder="EMS-2048-7319, EMS-2048-7320" rows={2}/><button className="button button-accent" type="submit"><Search size={15}/> Track shipment{trackingNumbers.length > 1 ? 's' : ''}</button></div>{error && <p className="form-error">{error}</p>}</form>
-    {searched && trackingNumbers.map((number, idx) => <article className="portal-panel shipment-result" key={number}><div className="shipment-result-head"><div><span className="status-pill"><i/> IN TRANSIT</span><h2>{number}</h2><small>International Express · Last scan October 15, 15:28 ET</small></div><div className="estimate-block"><span>ESTIMATED DELIVERY</span><b>Sunday, October 18</b><small>On schedule · {idx === 0 ? '2' : '3'} days remaining</small></div></div><div className="shipment-route-card"><div><span className="route-dot-blue"/><small>ORIGIN</small><b>New York, NY</b><span>United States</span></div><div className="portal-route-line"><Plane size={16}/><i/><i/><i/><i/><i/></div><div><span className="route-dot-amber"/><small>DESTINATION</small><b>London</b><span>United Kingdom</span></div></div><h3 className="timeline-heading">Shipment progress <span>5 milestones</span></h3><div className="portal-timeline">{exampleEvents.map(([title, place, time], i) => <div className={`portal-event ${i < 3 ? 'complete' : i === 3 ? 'current' : ''}`} key={title}><span className="portal-event-marker">{i < 3 ? <Check size={11}/> : i === 3 ? <i/> : null}</span><div><b>{title}</b><small>{place}</small></div><time>{time}</time></div>)}</div><div className="shipment-result-foot"><span><ShieldCheck size={14}/> Signature required at delivery</span><button className="text-link" onClick={() => window.print()}>Print tracking details <Download size={14}/></button></div></article>)}
+    {loading && <div className="portal-panel tracking-message">Loading the latest shipment scans…</div>}
+    {apiError && <div className="portal-panel tracking-message tracking-error">{apiError}</div>}
+    {searched && shipments.map((shipment, idx) => {
+      const number = trackingNumbers[idx]
+      if (!shipment) return <div className="portal-panel tracking-message" key={number}><b>{number}</b> was not found. Check the number and try again.</div>
+      const latest = shipment.events[0]
+      const latitude = latest?.latitude ?? shipment.senderLatitude
+      const longitude = latest?.longitude ?? shipment.senderLongitude
+      return <article className="portal-panel shipment-result" key={shipment.trackingNumber}>
+        <div className="shipment-result-head"><div><span className={`status-pill status-${shipment.status.toLowerCase()}`}><i/> {statusLabel(shipment.status)}</span><h2>{shipment.trackingNumber}</h2><small>{statusLabel(shipment.serviceType)}{latest ? ` · Updated ${formatDate(latest.timestamp)}` : ''}</small></div><div className="estimate-block"><span>ESTIMATED DELIVERY</span><b>{shipment.estimatedDelivery ? new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(new Date(shipment.estimatedDelivery)) : 'To be confirmed'}</b><small>{shipment.status === 'DELIVERED' ? `Delivered ${shipment.deliveredAt ? formatDate(shipment.deliveredAt) : ''}` : 'Delivery estimate from shipment record'}</small></div></div>
+        <div className="shipment-route-card"><div><span className="route-dot-blue"/><small>ORIGIN</small><b>{shipment.senderCity}</b><span>{shipment.senderCountry}</span></div><div className="portal-route-line"><Plane size={16}/><i/><i/><i/><i/><i/></div><div><span className="route-dot-amber"/><small>DESTINATION</small><b>{shipment.receiverCity}</b><span>{shipment.receiverCountry}</span></div></div>
+        <section className="tracking-map-card"><div className="tracking-map-head"><span><MapPin size={16}/><b>Current shipment location</b></span><small>Refreshes every 30 seconds from latest scan</small></div>{latitude !== null && longitude !== null ? <iframe className="tracking-osm-map" title={`Live shipment map for ${shipment.trackingNumber}`} loading="lazy" src={mapUrl(latitude, longitude)}/> : <div className="tracking-map-empty">Map location will appear when the next scan includes coordinates.</div>}<div className="tracking-map-caption"><span>{latest?.location ?? `${shipment.senderCity}, ${shipment.senderCountry}`}</span>{latitude !== null && longitude !== null && <a href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=8/${latitude}/${longitude}`} target="_blank" rel="noreferrer">Open larger map <ArrowRight size={13}/></a>}</div></section>
+        <h3 className="timeline-heading">Shipment progress <span>{shipment.events.length} scans</span></h3><div className="portal-timeline tracking-timeline">{shipment.events.length ? shipment.events.map((event, i) => <div className={`portal-event ${i === 0 ? 'current' : 'complete'}`} key={event.id}><span className="portal-event-marker">{i === 0 ? <i/> : <Check size={11}/>}</span><div><b>{statusLabel(event.status)}</b><small>{event.description}{event.facility ? ` · ${event.facility}` : ''} · {event.location}</small></div><time>{formatDate(event.timestamp)}</time></div>) : <p>No scan events are recorded yet.</p>}</div>
+        {shipment.status === 'DELIVERED' && <div className="shipment-result-foot"><span><ShieldCheck size={14}/> Signed by {shipment.signedBy || 'recipient'}</span><button className="text-link" onClick={() => window.print()}>Print tracking details <Download size={14}/></button></div>}
+      </article>
+    })}
   </PageFrame>
 }
 

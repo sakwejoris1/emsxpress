@@ -176,6 +176,28 @@ html{scroll-behavior:smooth;scroll-padding-top:24px}
 
 .hero-art .orbit,.hero-art .map-continent{display:none}
 
+.tracking-message{padding:18px 20px;margin-bottom:14px;color:#64748b;font-size:14px}
+.tracking-error{border-color:#fecaca;background:#fff7f7;color:#b42318}
+.status-pill.status-customs_hold{background:#f4efff;color:#7651bb}
+.status-pill.status-exception{background:#fff0f0;color:#c44343}
+.status-pill.status-delivered{background:#eaf8f1;color:#19805a}
+.tracking-map-card{border:1px solid #e5eaf1;margin:20px 0;overflow:hidden;background:#f5f7fb}
+.tracking-map-head,.tracking-map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:#fff}
+.tracking-map-head>span{display:flex;align-items:center;gap:8px;color:#285cc7}
+.tracking-map-head b{font-size:13px;color:#263854}
+.tracking-map-head small{font-size:11px;color:#8290a3}
+.tracking-osm-map{display:block;width:100%;height:340px;border:0;background:#e9eff2}
+.tracking-map-caption{font-size:12px;color:#54657d;border-top:1px solid #e7ebf1}
+.tracking-map-caption>a{display:inline-flex;align-items:center;gap:6px;color:#2864e8;font-weight:600}
+.tracking-map-empty{height:210px;display:grid;place-items:center;padding:22px;text-align:center;color:#7c899c;font-size:14px}
+.tracking-timeline{grid-template-columns:1fr;padding:13px 0 0}
+.tracking-timeline .portal-event{min-height:60px}
+.tracking-timeline .portal-event:not(:last-child):after{border:0;border-left:1px solid #e0e6ee;left:7px;right:auto;top:15px;bottom:-1px}
+.tracking-timeline .portal-event>div b{font-size:13px}
+.tracking-timeline .portal-event>div small{font-size:12px;line-height:1.5}
+.tracking-timeline .portal-event time{font-size:11px}
+@media(max-width:680px){.tracking-map-head,.tracking-map-caption{align-items:flex-start;flex-direction:column}.tracking-map-head small{font-size:11px}.tracking-osm-map{height:270px}.tracking-timeline .portal-event{grid-template-columns:17px 1fr;gap:8px;padding-bottom:13px}.tracking-timeline .portal-event time{grid-column:2;grid-row:2;text-align:left;margin-top:3px;padding:0}.tracking-timeline .portal-event>div b{font-size:13px}}
+
 /* ===== Photography ===== */
 .hero{background:#0f2166}
 .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 60%;opacity:.38;z-index:0}
