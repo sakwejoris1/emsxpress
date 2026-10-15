@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  BUSINESS
+  DISPATCHER
+  ADMIN
+}
+
+enum ShipmentStatus {
+  LABEL_CREATED
+  COLLECTED
+  ORIGIN_GATEWAY
+  IN_TRANSIT
+  CUSTOMS_HOLD
+  CUSTOMS_CLEARED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+}
+
+enum ServiceType {
+  EXPRESS_INTL
+  STANDARD_INTL
+  CARGO_FREIGHT
+  ECOMMERCE
+  BUSINESS_LOGISTICS
+  DOOR_TO_DOOR
+}
+
+model User {
+  id          String     @id @default(uuid())
+  email       String     @unique
+  name        String?
+  role        Role       @default(CUSTOMER)
+  companyName String?
+  shipments   Shipment[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Shipment {
+  id                String          @id @default(uuid())
+  trackingNumber    String          @unique
+  userId            String?
+  user              User?           @relation(fields: [userId], references: [id])
+  serviceType       ServiceType
+  status            ShipmentStatus  @default(LABEL_CREATED)
+  senderName        String
+  senderAddress     String
+  senderCity        String
+  senderCountry     String
+  receiverName      String
+  receiverAddress   String
+  receiverCity      String
+  receiverCountry   String
+  weightKg          Float
+  lengthCm          Float?
+  widthCm           Float?
+  heightCm          Float?
+  declaredValue     Float?
+  estimatedDelivery DateTime?
+  signedBy          String?
+  deliveredAt       DateTime?
+  events            TrackingEvent[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([userId, status])
+  @@index([status, estimatedDelivery])
+}
+
+model TrackingEvent {
+  id          String         @id @default(uuid())
+  shipmentId  String
+  shipment    Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status      ShipmentStatus
+  location    String
+  facility    String?
+  description String
+  timestamp   DateTime       @default(now())
+
+  @@index([shipmentId, timestamp])
+}

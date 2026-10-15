@@ -1,0 +1,53 @@
+/* Keep a clear, familiar hierarchy across the public site and portal. */
+.fc-site h1,
+.fc-site h2,
+.fc-site h3,
+.portal-main h1,
+.portal-main h2,
+.portal-main h3,
+.np-h1,
+.np-h2,
+.np-auth-title {
+  font-weight: 600 !important;
+  letter-spacing: -0.035em;
+}
+
+.fc-site .fc-brand,
+.fc-site .fc-nav a,
+.fc-site .fc-login,
+.fc-site .fc-ship-btn,
+.fc-site .fc-primary-btn,
+.fc-site .fc-outline-btn,
+.portal-main .button,
+.portal-main .text-link {
+  font-weight: 600;
+}
+
+.fc-site p,
+.portal-main p,
+.np-lead,
+.np-body,
+.np-copy {
+  font-weight: 400;
+}
+
+.fc-site .fc-stats strong,
+.fc-site .fc-benefit h3,
+.fc-site .fc-service-title h3,
+.fc-site .fc-business-features b,
+.fc-site .fc-help h2,
+.fc-site .fc-section-head h2,
+.fc-site .fc-network h2,
+.fc-site .fc-journey h2,
+.fc-site .fc-business h2,
+.fc-site .fc-benefits h2,
+.fc-site .fc-resources h2,
+.fc-site .fc-resource h3 {
+  font-weight: 600 !important;
+}
+
+.fc-site .fc-kicker,
+.fc-site .fc-footer-col > b,
+.fc-site .fc-resource b {
+  font-weight: 600;
+}
