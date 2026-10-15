@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { z } from 'zod'
-import { prisma } from '../src/lib/prisma'
+import { prisma } from '../src/lib/prisma.js'
 
 const querySchema = z.array(z.string().trim().min(1).max(40)).min(1).max(10)
 

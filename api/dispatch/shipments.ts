@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { z } from 'zod'
-import { prisma } from '../../src/lib/prisma'
+import { prisma } from '../../src/lib/prisma.js'
 
 const shipmentSchema = z.object({
   trackingNumber: z.string().trim().min(6).max(40).regex(/^[A-Z0-9-]+$/),
