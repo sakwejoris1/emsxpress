@@ -2,6 +2,25 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/admin/rates",
+      "destination": "/api/admin/operations?resource=rates"
+    },
+    {
+      "source": "/api/admin/locations",
+      "destination": "/api/admin/operations?resource=locations"
+    },
+    {
+      "source": "/api/admin/inquiries",
+      "destination": "/api/admin/operations?resource=inquiries"
+    },
+    {
+      "source": "/api/admin/invoices",
+      "destination": "/api/admin/operations?resource=invoices"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
