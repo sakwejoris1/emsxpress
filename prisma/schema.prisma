@@ -35,47 +35,70 @@ enum ServiceType {
   DOOR_TO_DOOR
 }
 
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
 model User {
-  id          String     @id @default(uuid())
-  email       String     @unique
-  name        String?
-  role        Role       @default(CUSTOMER)
-  companyName String?
-  shipments   Shipment[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String?
+  role         Role       @default(CUSTOMER)
+  companyName  String?
+  phone        String?
+  passwordHash String?
+  shipments    Shipment[]
+  invoices     Invoice[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Shipment {
-  id                String          @id @default(uuid())
-  trackingNumber    String          @unique
-  userId            String?
-  user              User?           @relation(fields: [userId], references: [id])
-  serviceType       ServiceType
-  status            ShipmentStatus  @default(LABEL_CREATED)
-  senderName        String
-  senderAddress     String
-  senderCity        String
-  senderCountry     String
-  senderLatitude    Float?
-  senderLongitude   Float?
-  receiverName      String
-  receiverAddress   String
-  receiverCity      String
-  receiverCountry   String
-  receiverLatitude  Float?
-  receiverLongitude Float?
-  weightKg          Float
-  lengthCm          Float?
-  widthCm           Float?
-  heightCm          Float?
-  declaredValue     Float?
-  estimatedDelivery DateTime?
-  signedBy          String?
-  deliveredAt       DateTime?
-  events            TrackingEvent[]
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                 String            @id @default(uuid())
+  trackingNumber     String            @unique
+  userId             String?
+  user               User?             @relation(fields: [userId], references: [id])
+  serviceType        ServiceType
+  status             ShipmentStatus    @default(LABEL_CREATED)
+  senderName         String
+  senderAddress      String
+  senderCity         String
+  senderCountry      String
+  senderPostalCode   String?
+  senderLatitude     Float?
+  senderLongitude    Float?
+  receiverName       String
+  receiverAddress    String
+  receiverCity       String
+  receiverCountry    String
+  receiverPostalCode String?
+  receiverLatitude   Float?
+  receiverLongitude  Float?
+  weightKg           Float
+  lengthCm           Float?
+  widthCm            Float?
+  heightCm           Float?
+  declaredValue      Float?
+  packageType        String?
+  quotedPrice        Float?
+  currency           String            @default("USD")
+  invoiceItems       InvoiceItem[]
+  estimatedDelivery  DateTime?
+  signedBy           String?
+  deliveredAt        DateTime?
+  events             TrackingEvent[]
+  currentPosition    ShipmentPosition?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   @@index([userId, status])
   @@index([status, estimatedDelivery])
@@ -94,4 +117,108 @@ model TrackingEvent {
   timestamp   DateTime       @default(now())
 
   @@index([shipmentId, timestamp])
+}
+
+model ShipmentPosition {
+  id         String   @id @default(uuid())
+  shipmentId String   @unique
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  latitude   Float
+  longitude  Float
+  source     String
+  recordedAt DateTime
+  updatedAt  DateTime @updatedAt
+
+  @@index([recordedAt])
+}
+
+model QuoteRate {
+  id                      String      @id @default(uuid())
+  name                    String
+  serviceType             ServiceType
+  originCountry           String?
+  destinationCountry      String?
+  originPostalPrefix      String?
+  destinationPostalPrefix String?
+  packageType             String?
+  basePrice               Float
+  pricePerKg              Float
+  minimumCharge           Float       @default(0)
+  currency                String      @default("USD")
+  minimumDays             Int
+  maximumDays             Int
+  active                  Boolean     @default(true)
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  @@index([active, serviceType])
+}
+
+model ServiceLocation {
+  id         String   @id @default(uuid())
+  name       String
+  type       String
+  address    String
+  city       String
+  country    String
+  postalCode String?
+  hours      String
+  cutoff     String?
+  latitude   Float
+  longitude  Float
+  services   String[] @default([])
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([active, city, country])
+}
+
+model ContactInquiry {
+  id             String        @id @default(uuid())
+  name           String
+  email          String
+  category       String
+  trackingNumber String?
+  message        String
+  status         InquiryStatus @default(NEW)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  periodStart   DateTime
+  periodEnd     DateTime
+  dueDate       DateTime
+  status        InvoiceStatus @default(ISSUED)
+  currency      String        @default("USD")
+  total         Float
+  issuedAt      DateTime      @default(now())
+  paidAt        DateTime?
+  items         InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId, status, dueDate])
+}
+
+model InvoiceItem {
+  id          String    @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  shipmentId  String?
+  shipment    Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Int       @default(1)
+  unitPrice   Float
+  amount      Float
+  createdAt   DateTime  @default(now())
+
+  @@index([invoiceId])
 }

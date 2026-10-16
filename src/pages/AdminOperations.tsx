@@ -1,0 +1,78 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { Check, CircleDollarSign, ClipboardList, MapPinned, Plus, RefreshCw, Send, ShieldAlert } from 'lucide-react'
+import './admin-operations.css'
+
+type Rate = { id: string; name: string; serviceType: string; originCountry: string | null; destinationCountry: string | null; originPostalPrefix: string | null; destinationPostalPrefix: string | null; packageType: string | null; basePrice: number; pricePerKg: number; minimumCharge: number; currency: string; minimumDays: number; maximumDays: number; active: boolean }
+type Location = { id: string; name: string; type: string; address: string; city: string; country: string; postalCode: string | null; hours: string; cutoff: string | null; latitude: number; longitude: number; services: string[]; active: boolean }
+type Inquiry = { id: string; name: string; email: string; category: string; trackingNumber: string | null; message: string; status: string; createdAt: string }
+type Invoice = { id: string; invoiceNumber: string; periodStart: string; periodEnd: string; dueDate: string; status: string; currency: string; total: number; user: { email: string; name: string | null; companyName: string | null }; items: { id: string; description: string; amount: number }[] }
+
+const serviceTypes = ['EXPRESS_INTL','STANDARD_INTL','CARGO_FREIGHT','ECOMMERCE','BUSINESS_LOGISTICS','DOOR_TO_DOOR']
+const pretty = (s: string) => s.toLowerCase().replaceAll('_',' ').replace(/\b\w/g, c => c.toUpperCase())
+const dateText = (s: string) => new Intl.DateTimeFormat(undefined, { dateStyle:'medium' }).format(new Date(s))
+const usd = (amount: number, currency: string) => new Intl.NumberFormat(undefined, { style:'currency', currency }).format(amount)
+
+export default function AdminOperations() {
+  const [tab, setTab] = useState<'rates'|'locations'|'inquiries'|'invoices'>('rates')
+  const [rates, setRates] = useState<Rate[]>([]); const [locations, setLocations] = useState<Location[]>([])
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]); const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('')
+  const [rate, setRate] = useState({ name:'',serviceType:'EXPRESS_INTL',originCountry:'',destinationCountry:'',originPostalPrefix:'',destinationPostalPrefix:'',packageType:'',basePrice:'',pricePerKg:'',minimumCharge:'',currency:'USD',minimumDays:'2',maximumDays:'4' })
+  const [location, setLocation] = useState({ name:'',type:'Service center',address:'',city:'',country:'',postalCode:'',hours:'',cutoff:'',latitude:'',longitude:'',services:'' })
+  const [invoiceRequest, setInvoiceRequest] = useState({ email:'',period:new Date().toISOString().slice(0,7),dueDate:'' })
+
+  const refresh = async () => {
+    const [r,l,i,v] = await Promise.all(['/api/admin/rates','/api/admin/locations','/api/admin/inquiries','/api/admin/invoices'].map(url => fetch(url,{credentials:'same-origin'})))
+    const payloads = await Promise.all([r,l,i,v].map(response => response.json()))
+    for (const [response,payload] of [[r,payloads[0]],[l,payloads[1]],[i,payloads[2]],[v,payloads[3]]] as const) if (!response.ok) throw new Error(payload.error || 'Could not load admin operations data.')
+    setRates(payloads[0].rates); setLocations(payloads[1].locations); setInquiries(payloads[2].inquiries); setInvoices(payloads[3].invoices)
+  }
+  useEffect(() => { refresh().catch(cause => setError(cause.message)) }, [])
+
+  const send = async (url: string, method: string, body: unknown) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const response = await fetch(url,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'Could not save changes.')
+      setNotice(payload.message || 'Saved.'); await refresh(); return payload
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save changes.'); return null }
+    finally { setBusy(false) }
+  }
+
+  const addRate = async (event: FormEvent) => {
+    event.preventDefault()
+    const result = await send('/api/admin/rates','POST',{...rate,originCountry:rate.originCountry || undefined,destinationCountry:rate.destinationCountry || undefined,originPostalPrefix:rate.originPostalPrefix || undefined,destinationPostalPrefix:rate.destinationPostalPrefix || undefined,packageType:rate.packageType || undefined,basePrice:Number(rate.basePrice),pricePerKg:Number(rate.pricePerKg),minimumCharge:Number(rate.minimumCharge),minimumDays:Number(rate.minimumDays),maximumDays:Number(rate.maximumDays)})
+    if(result) setRate({...rate,name:'',basePrice:'',pricePerKg:'',minimumCharge:''})
+  }
+  const addLocation = async (event: FormEvent) => {
+    event.preventDefault()
+    const result = await send('/api/admin/locations','POST',{...location,postalCode:location.postalCode || undefined,cutoff:location.cutoff || undefined,latitude:Number(location.latitude),longitude:Number(location.longitude),services:location.services.split(',').map(s=>s.trim()).filter(Boolean)})
+    if(result) setLocation({...location,name:'',address:'',city:'',country:'',postalCode:'',hours:'',cutoff:'',latitude:'',longitude:'',services:''})
+  }
+  const makeInvoice = async (event: FormEvent) => {
+    event.preventDefault(); const result = await send('/api/admin/invoices','POST',{...invoiceRequest,dueDate:invoiceRequest.dueDate || undefined})
+    if(result) setNotice(`Invoice ${result.invoice.invoiceNumber} issued for ${usd(result.invoice.total,result.invoice.currency)}.`)
+  }
+
+  const tabs = [
+    { id:'rates' as const,icon:CircleDollarSign,title:'Rates',count:rates.filter(item=>item.active).length },
+    { id:'locations' as const,icon:MapPinned,title:'Locations',count:locations.filter(item=>item.active).length },
+    { id:'inquiries' as const,icon:Send,title:'Support inbox',count:inquiries.filter(item=>item.status==='NEW').length },
+    { id:'invoices' as const,icon:ClipboardList,title:'Invoices',count:invoices.filter(item=>item.status==='ISSUED').length },
+  ]
+
+  return <section className="ops-panel portal-panel">
+    <div className="ops-heading"><div><span className="eyebrow"><span className="eyebrow-icon"><ShieldAlert size={14}/></span> BUSINESS OPERATIONS</span><h2>Rates, network & billing</h2><p>Publish your own tariffs and verified locations; these records power public quotes and search.</p></div><button className="ops-refresh" onClick={()=>refresh().catch(cause=>setError(cause.message))}><RefreshCw size={14}/> Refresh</button></div>
+    <nav className="ops-tabs">{tabs.map(({id,icon:Icon,title,count})=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={15}/>{title}<span>{count}</span></button>)}</nav>
+    {error&&<div className="ops-message error">{error}<button onClick={()=>setError('')}>×</button></div>}{notice&&<div className="ops-message success"><Check size={14}/>{notice}<button onClick={()=>setNotice('')}>×</button></div>}
+
+    {tab==='rates'&&<div className="ops-content"><form className="ops-form" onSubmit={addRate}><div><b>Publish a shipping rate</b><small>Country, postal prefix, and package fields can narrow a rate rule. The most specific published rule applies.</small></div><div className="ops-grid"><label>RATE NAME<input required value={rate.name} onChange={e=>setRate({...rate,name:e.target.value})} placeholder="Express international"/></label><label>SERVICE<select value={rate.serviceType} onChange={e=>setRate({...rate,serviceType:e.target.value})}>{serviceTypes.map(x=><option key={x}>{x}</option>)}</select></label><label>ORIGIN COUNTRY<input value={rate.originCountry} onChange={e=>setRate({...rate,originCountry:e.target.value})} placeholder="Any origin"/></label><label>DESTINATION COUNTRY<input value={rate.destinationCountry} onChange={e=>setRate({...rate,destinationCountry:e.target.value})} placeholder="Any destination"/></label><label>ORIGIN POSTAL PREFIX<input value={rate.originPostalPrefix} onChange={e=>setRate({...rate,originPostalPrefix:e.target.value})} placeholder="Optional zone prefix"/></label><label>DESTINATION POSTAL PREFIX<input value={rate.destinationPostalPrefix} onChange={e=>setRate({...rate,destinationPostalPrefix:e.target.value})} placeholder="Optional zone prefix"/></label><label>PACKAGE TYPE<select value={rate.packageType} onChange={e=>setRate({...rate,packageType:e.target.value})}><option value="">All package types</option>{['Document','Parcel','Pallet','Container'].map(x=><option key={x}>{x}</option>)}</select></label><label>CURRENCY<input required maxLength={3} value={rate.currency} onChange={e=>setRate({...rate,currency:e.target.value.toUpperCase()})}/></label><label>BASE PRICE<input required min="0" step="0.01" type="number" value={rate.basePrice} onChange={e=>setRate({...rate,basePrice:e.target.value})}/></label><label>PRICE PER KG<input required min="0" step="0.01" type="number" value={rate.pricePerKg} onChange={e=>setRate({...rate,pricePerKg:e.target.value})}/></label><label>MINIMUM CHARGE<input required min="0" step="0.01" type="number" value={rate.minimumCharge} onChange={e=>setRate({...rate,minimumCharge:e.target.value})}/></label><label>TRANSIT DAYS (MIN / MAX)<span className="ops-inline"><input required min="1" type="number" value={rate.minimumDays} onChange={e=>setRate({...rate,minimumDays:e.target.value})}/><input required min="1" type="number" value={rate.maximumDays} onChange={e=>setRate({...rate,maximumDays:e.target.value})}/></span></label></div><button className="button button-accent small" disabled={busy}><Plus size={14}/> Publish rate</button></form><div className="ops-records">{rates.length?rates.map(item=><article className={!item.active?'inactive':''} key={item.id}><span className="ops-record-main"><b>{item.name}</b><small>{pretty(item.serviceType)} · {item.originCountry||'Any origin'} {item.originPostalPrefix?`(${item.originPostalPrefix}*)`:''} → {item.destinationCountry||'Any destination'} {item.destinationPostalPrefix?`(${item.destinationPostalPrefix}*)`:''} · {item.packageType||'All package types'}</small></span><strong>{item.currency} {item.basePrice.toFixed(2)} + {item.pricePerKg.toFixed(2)}/kg<small>{item.minimumDays}–{item.maximumDays} business days</small></strong><button onClick={()=>send('/api/admin/rates','PATCH',{id:item.id,active:!item.active})}>{item.active?'Pause':'Publish'}</button></article>):<div className="ops-empty">No price rules yet. Add verified tariffs above to enable the live quote calculator.</div>}</div></div>}
+
+    {tab==='locations'&&<div className="ops-content"><form className="ops-form" onSubmit={addLocation}><div><b>Add a verified service point</b><small>Only locations you enter here are shown in the public locator.</small></div><div className="ops-grid"><label>LOCATION NAME<input required value={location.name} onChange={e=>setLocation({...location,name:e.target.value})}/></label><label>LOCATION TYPE<input required value={location.type} onChange={e=>setLocation({...location,type:e.target.value})} placeholder="Depot, counter, locker"/></label><label>STREET ADDRESS<input required value={location.address} onChange={e=>setLocation({...location,address:e.target.value})}/></label><label>CITY<input required value={location.city} onChange={e=>setLocation({...location,city:e.target.value})}/></label><label>COUNTRY<input required value={location.country} onChange={e=>setLocation({...location,country:e.target.value})}/></label><label>POSTAL CODE<input value={location.postalCode} onChange={e=>setLocation({...location,postalCode:e.target.value})}/></label><label>OPENING HOURS<input required value={location.hours} onChange={e=>setLocation({...location,hours:e.target.value})} placeholder="Mon–Fri 08:00–18:00"/></label><label>ACCEPTANCE CUTOFF<input value={location.cutoff} onChange={e=>setLocation({...location,cutoff:e.target.value})} placeholder="Express cutoff 16:30"/></label><label>LATITUDE<input required type="number" step="any" value={location.latitude} onChange={e=>setLocation({...location,latitude:e.target.value})}/></label><label>LONGITUDE<input required type="number" step="any" value={location.longitude} onChange={e=>setLocation({...location,longitude:e.target.value})}/></label><label className="wide">SERVICES (COMMA SEPARATED)<input value={location.services} onChange={e=>setLocation({...location,services:e.target.value})} placeholder="Drop-off, pickup, express"/></label></div><button className="button button-accent small" disabled={busy}><Plus size={14}/> Add location</button></form><div className="ops-records">{locations.length?locations.map(item=><article className={!item.active?'inactive':''} key={item.id}><span className="ops-record-main"><b>{item.name}</b><small>{item.address}, {item.city}, {item.country} · {item.hours}</small></span><strong>{item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}<small>{item.services.join(' · ')||item.type}</small></strong><button onClick={()=>send('/api/admin/locations','PATCH',{id:item.id,active:!item.active})}>{item.active?'Hide':'Publish'}</button></article>):<div className="ops-empty">No service locations yet. Add verified addresses and coordinates above.</div>}</div></div>}
+
+    {tab==='inquiries'&&<div className="ops-records">{inquiries.length?inquiries.map(item=><article className="ops-inquiry" key={item.id}><span className="ops-record-main"><b>{item.category} · {item.name}</b><small><a href={`mailto:${item.email}`}>{item.email}</a>{item.trackingNumber?` · ${item.trackingNumber}`:''} · {dateText(item.createdAt)}</small><p>{item.message}</p></span><select value={item.status} onChange={e=>send('/api/admin/inquiries','PATCH',{id:item.id,status:e.target.value})}><option value="NEW">New</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select></article>):<div className="ops-empty">No support requests have been received.</div>}</div>}
+
+    {tab==='invoices'&&<div className="ops-content"><form className="ops-form" onSubmit={makeInvoice}><div><b>Issue a monthly business invoice</b><small>Invoices include rated, unbilled shipments created during the selected month.</small></div><div className="ops-grid"><label>BUSINESS ACCOUNT EMAIL<input required type="email" value={invoiceRequest.email} onChange={e=>setInvoiceRequest({...invoiceRequest,email:e.target.value})}/></label><label>BILLING PERIOD<input required type="month" value={invoiceRequest.period} onChange={e=>setInvoiceRequest({...invoiceRequest,period:e.target.value})}/></label><label>DUE DATE<input type="date" value={invoiceRequest.dueDate} onChange={e=>setInvoiceRequest({...invoiceRequest,dueDate:e.target.value})}/></label></div><button className="button button-accent small" disabled={busy}><Plus size={14}/> Generate invoice</button></form><div className="ops-records">{invoices.length?invoices.map(item=><article key={item.id}><span className="ops-record-main"><b>{item.invoiceNumber} · {item.user.companyName||item.user.email}</b><small>{dateText(item.periodStart)} – {dateText(item.periodEnd)} · Due {dateText(item.dueDate)} · {item.items.length} shipments</small></span><strong>{usd(item.total,item.currency)}<small>{item.status}</small></strong><button disabled={item.status==='PAID'} onClick={()=>send('/api/admin/invoices','PATCH',{id:item.id,status:item.status==='PAID'?'ISSUED':'PAID'})}>{item.status==='PAID'?'Paid':'Mark paid'}</button></article>):<div className="ops-empty">No invoices issued yet. Issue one from rated business shipments above.</div>}</div></div>}
+  </section>
+}

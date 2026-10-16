@@ -60,16 +60,30 @@ export default function ShippingPage() {
   const [form, setForm] = useState<Form>(initial)
   const [errors, setErrors] = useState<Errors>({})
   const [ref, setRef] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const set = (k: keyof Form) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     const er = validate(form)
     setErrors(er)
     if (Object.keys(er).length) return
-    setRef('EMS-' + Math.floor(100000 + Math.random() * 900000))
+    setBusy(true); setSubmitError('')
+    try {
+      const message = [
+        'Collection request', `Service: ${form.service}`, `Contents: ${form.contents}`, `Packages: ${form.packages}`, `Weight: ${form.weight} kg`,
+        `Ready date: ${form.readyDate}`, `Origin: ${form.fromCity}, ${form.fromCountry}`, `Destination: ${form.toCity}, ${form.toCountry}`,
+        `Phone: ${form.phone}`, `Special instructions: ${form.notes || 'None'}`,
+      ].join('\n')
+      const response = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.fullName, email: form.email, category: 'Dispatch', message }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not submit the collection request.')
+      setRef(result.inquiryId)
+    } catch (cause) { setSubmitError(cause instanceof Error ? cause.message : 'Could not submit the collection request.') }
+    finally { setBusy(false) }
   }
 
   const reset = () => { setForm(initial); setErrors({}); setRef('') }
@@ -96,7 +110,7 @@ export default function ShippingPage() {
       {ref ? <div className="np-card np-success">
         <span className="np-check"><Check size={20} /></span>
         <h2>Request received</h2>
-        <p>Your reference is <b>{ref}</b>. We'll email your rate, transit time and pickup window to <b>{form.email}</b> shortly. Nothing has been charged.</p>
+        <p>Your dispatch request reference is <b>{ref}</b>. The team can review the details and follow up at <b>{form.email}</b> to confirm the rate and pickup window. This request is not a confirmed booking.</p>
         <button className="np-btn np-btn-ghost" onClick={reset}>Submit another request</button>
       </div> :
       <form className="np-form-grid" onSubmit={submit} noValidate>
@@ -141,8 +155,9 @@ export default function ShippingPage() {
             <li>You confirm, and we collect.</li>
           </ol>
           <div className="np-notice"><Info size={18} /><span><b>Nothing is charged at this step.</b> You confirm once we send the rate.</span></div>
-          <button className="np-btn np-btn-amber np-block" type="submit">Request collection <ArrowRight size={16} /></button>
-          <p className="np-hint">Demo form: requests are not sent to a booking system until the backend is connected.</p>
+          {submitError && <p className="np-error" role="alert">{submitError}</p>}
+          <button className="np-btn np-btn-amber np-block" type="submit" disabled={busy}>{busy ? 'Sending request…' : 'Request collection'} <ArrowRight size={16} /></button>
+          <p className="np-hint">Your request is saved to the dispatch inbox. The team will confirm the rate and pickup window.</p>
         </aside>
       </form>}
 

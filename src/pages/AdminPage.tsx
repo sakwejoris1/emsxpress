@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Activity, AlertTriangle, ArrowRight, Box, Check, ChevronRight, Clock3, LogOut, MapPin, PackageCheck, Plus, RefreshCw, Search, ShieldCheck, Truck } from 'lucide-react'
 import { PageFrame } from '../Layout'
+import AdminOperations from './AdminOperations'
 import './admin.css'
 
 type EventRow = { id: string; status: string; location: string; facility: string | null; description: string; latitude: number | null; longitude: number | null; timestamp: string }
@@ -165,7 +166,7 @@ export default function AdminPage() {
         {showCreate && <form className="admin-create" onSubmit={createShipment}>
           <div className="admin-form-title"><b>Create shipment</b><small>Creates a shipment and initial label scan.</small></div>
           <div className="admin-form-grid">
-            <label>TRACKING NUMBER<input required minLength={6} value={shipmentForm.trackingNumber} onChange={e => setShipmentForm({ ...shipmentForm, trackingNumber: e.target.value })} placeholder="EMS-2048-7322"/></label>
+            <label>TRACKING NUMBER<input required minLength={6} value={shipmentForm.trackingNumber} onChange={e => setShipmentForm({ ...shipmentForm, trackingNumber: e.target.value })} placeholder="Enter a tracking number"/></label>
             <label>SERVICE<select value={shipmentForm.serviceType} onChange={e => setShipmentForm({ ...shipmentForm, serviceType: e.target.value })}>{services.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></label>
             <label>SENDER NAME<input required value={shipmentForm.senderName} onChange={e => setShipmentForm({ ...shipmentForm, senderName: e.target.value })}/></label>
             <label>SENDER ADDRESS<input required value={shipmentForm.senderAddress} onChange={e => setShipmentForm({ ...shipmentForm, senderAddress: e.target.value })}/></label>
@@ -206,5 +207,6 @@ export default function AdminPage() {
       </aside>
     </div>
     <div className="admin-security-note"><ShieldCheck size={14}/> Shipment changes are validated on the server and recorded as scan events. <span>Customers see updates on their tracking page.</span></div>
+    <AdminOperations/>
   </PageFrame>
 }

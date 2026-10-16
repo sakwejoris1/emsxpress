@@ -18,6 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         senderCity: true, senderCountry: true, senderLatitude: true, senderLongitude: true,
         receiverCity: true, receiverCountry: true, receiverLatitude: true, receiverLongitude: true,
         estimatedDelivery: true, signedBy: true, deliveredAt: true,
+        currentPosition: true,
         events: { orderBy: { timestamp: 'desc' }, take: 50 },
       },
     })

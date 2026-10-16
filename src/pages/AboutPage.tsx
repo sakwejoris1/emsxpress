@@ -1,24 +1,6 @@
-import { useEffect, useState } from 'react'
 import { ArrowRight, Headphones, Leaf, Plane, ShieldCheck, Truck, Zap, FileCheck, Globe2 } from 'lucide-react'
 import { images } from '../images'
 import { SiteFooter, SiteHeader } from '../Layout'
-
-function CountUp({ to, decimals = 0, prefix = '', suffix = '' }: { to: number; decimals?: number; prefix?: string; suffix?: string }) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    let raf = 0
-    const start = performance.now()
-    const dur = 1400
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / dur)
-      setV(to * (1 - Math.pow(1 - p, 3)))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [to])
-  return <>{prefix}{v.toFixed(decimals)}{suffix}</>
-}
 
 const infrastructure = [
   { icon: Plane, title: 'Air gateways', text: 'Priority uplift agreements with major commercial and dedicated freighter networks across JFK, LHR, FRA and DXB.' },
@@ -44,11 +26,11 @@ export default function AboutPage() {
         <p className="np-lead np-lead-light">EMSXpress connects global markets through uncompromising scan-level transparency, elite air and ocean linehaul, and dependable door-to-door execution.</p>
       </section>
 
-      <section className="np-counters" aria-label="Company metrics">
-        <div><b><CountUp to={70} suffix="+" /></b><span>Cities served globally</span></div>
-        <div><b><CountUp to={98.4} decimals={1} suffix="%" /></b><span>On-time delivery record</span></div>
-        <div><b><CountUp to={2.4} decimals={1} suffix="M+" /></b><span>Successful consignments delivered</span></div>
-        <div><b>24/7</b><span>Network operations and support</span></div>
+      <section className="np-counters" aria-label="Platform capabilities">
+        <div><b>Shipment</b><span>Tracking records</span></div>
+        <div><b>Route</b><span>Published rate cards</span></div>
+        <div><b>Service</b><span>Verified locations</span></div>
+        <div><b>Dispatch</b><span>Saved support requests</span></div>
       </section>
 
       <section className="np-section np-mission">

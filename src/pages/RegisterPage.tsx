@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Building2, Check, Eye, EyeOff, FileUp, Globe2, ShieldCheck, Truck, User } from 'lucide-react'
+import { Building2, Eye, EyeOff, FileUp, Globe2, ShieldCheck, Truck, User } from 'lucide-react'
 import { images } from '../images'
 import { SiteFooter, SiteHeader } from '../Layout'
 
@@ -32,7 +32,6 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Errors>({})
   const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState(false)
   const [notice, setNotice] = useState('')
   const [slide, setSlide] = useState(0)
 
@@ -55,16 +54,24 @@ export default function RegisterPage() {
     return e
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     const er = validate()
     setErrors(er)
     if (Object.keys(er).length) return
     setBusy(true)
-    setTimeout(() => { setBusy(false); setDone(true) }, 1200)
+    setNotice('')
+    try {
+      const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'register', accountType: form.accountType, fullName: form.fullName, companyName: form.companyName || undefined, email: form.email, phone: `${form.code} ${form.phone}`, password: form.password }) })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'Could not create your account.')
+      window.location.assign('/dashboard')
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : 'Could not create your account.')
+      setBusy(false)
+    }
   }
 
-  const sso = (provider: string) => setNotice(`${provider} sign-in needs the authentication backend to be connected.`)
   const pwScore = score(form.password)
   const business = form.accountType === 'business'
   const H = highlights[slide]
@@ -78,7 +85,7 @@ export default function RegisterPage() {
         <div>
           <span className="np-eyebrow np-eyebrow-light"><Globe2 size={14} /> Join EMSXpress</span>
           <h1 className="np-auth-title">Ship globally. Pay once a month.</h1>
-          <div className="np-trust"><b>Join 10,000+ businesses shipping globally</b><span>Trusted by exporters, online sellers and families across 70+ cities.</span></div>
+          <div className="np-trust"><b>One account for every shipment</b><span>Manage bookings, tracking, and billing from your EMSXpress account.</span></div>
         </div>
         <div className="np-highlight" key={slide}>
           <span className="np-highlight-icon"><HIcon size={20} /></span>
@@ -90,12 +97,6 @@ export default function RegisterPage() {
 
       <section className="np-auth-form">
         <div className="np-auth-card">
-          {done ? <div className="np-success">
-            <span className="np-check"><Check size={20} /></span>
-            <h2>Form submitted</h2>
-            <p className="np-hint">Demo form: no account has been created and your details were not saved. Connect the authentication backend to activate sign-up.</p>
-            <button className="np-btn np-btn-ghost" onClick={() => setDone(false)}>Back to the form</button>
-          </div> : <>
           <h2 className="np-h2">Create your account</h2>
           <p className="np-hint">Choose the account type that fits how you ship.</p>
           <div className="np-tabs" role="tablist" aria-label="Account type">
@@ -131,14 +132,8 @@ export default function RegisterPage() {
             <button className="np-btn np-block" type="submit" disabled={busy}>{busy ? <><span className="np-spinner" aria-hidden="true" /> Creating account…</> : 'Create account'}</button>
           </form>
 
-          <div className="np-divider">Or continue with</div>
-          <div className="np-oauth">
-            <button type="button" onClick={() => sso('Google')}><i style={{ background: '#4285F4' }}>G</i> Continue with Google</button>
-            {business && <button type="button" onClick={() => sso('Microsoft')}><i style={{ background: '#0F172A' }}>M</i> Continue with Microsoft (Azure AD)</button>}
-          </div>
           {notice && <p className="np-hint np-notice-line">{notice}</p>}
-          <p className="np-footer-link">Already have a freight account? <a href="/dashboard">Log in</a></p>
-          </>}
+          <p className="np-footer-link">Already have an EMSXpress account? <a href="/login">Log in</a></p>
         </div>
       </section>
     </main>
