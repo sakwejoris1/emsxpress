@@ -3,12 +3,14 @@ import rates from './_rates.js'
 import locations from './_locations.js'
 import inquiries from './_inquiries.js'
 import invoices from './_invoices.js'
+import position from './_position.js'
 
 const operations: Record<string, (req: VercelRequest, res: VercelResponse) => unknown> = {
   rates,
   locations,
   inquiries,
   invoices,
+  position,
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

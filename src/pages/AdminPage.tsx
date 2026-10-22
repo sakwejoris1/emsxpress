@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Activity, AlertTriangle, ArrowRight, Box, Check, ChevronRight, Clock3, LogOut, MapPin, PackageCheck, Plus, RefreshCw, Search, ShieldCheck, Truck } from 'lucide-react'
 import { PageFrame } from '../Layout'
 import AdminOperations from './AdminOperations'
@@ -37,6 +37,10 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [sharingLocation, setSharingLocation] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
+  const locationWatch = useRef<number | null>(null)
+  const lastPositionSentAt = useRef(0)
   const [shipmentForm, setShipmentForm] = useState(blankShipment)
   const [scan, setScan] = useState({ status: 'IN_TRANSIT', location: '', facility: '', description: '', latitude: '', longitude: '', signedBy: '', estimatedDelivery: '' })
 
@@ -71,6 +75,20 @@ export default function AdminPage() {
   }, [authenticated])
 
   useEffect(() => {
+    if (locationWatch.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatch.current)
+      locationWatch.current = null
+      setSharingLocation(false)
+      setLocationMessage('Location sharing stopped because the selected shipment changed.')
+    }
+    lastPositionSentAt.current = 0
+  }, [selectedNumber])
+
+  useEffect(() => () => {
+    if (locationWatch.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(locationWatch.current)
+  }, [])
+
+  useEffect(() => {
     if (!selected) return
     const latest = selected.events[0]
     setScan({
@@ -93,6 +111,7 @@ export default function AdminPage() {
   }
 
   const signOut = async () => {
+    stopLocationSharing()
     await fetch('/api/admin/auth', { method: 'DELETE', credentials: 'same-origin' })
     setAuthenticated(false); setShipments([])
   }
@@ -118,6 +137,7 @@ export default function AdminPage() {
 
   const addScan = async (event: FormEvent) => {
     event.preventDefault(); if (!selected) return
+    if (scan.status === 'DELIVERED') stopLocationSharing()
     setBusy(true); setError(''); setNotice('')
     const body = {
       trackingNumber: selected.trackingNumber, status: scan.status, location: scan.location, facility: scan.facility || undefined,
@@ -135,6 +155,51 @@ export default function AdminPage() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update shipment.') }
     finally { setBusy(false) }
   }
+
+  const stopLocationSharing = () => {
+    if (locationWatch.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(locationWatch.current)
+    locationWatch.current = null
+    setSharingLocation(false)
+    lastPositionSentAt.current = 0
+    setLocationMessage('Live location sharing stopped on this device.')
+  }
+
+  const startLocationSharing = () => {
+    if (!selected || selected.status === 'DELIVERED') return
+    if (!('geolocation' in navigator)) { setLocationMessage('This device does not provide browser location.'); return }
+    if (!window.isSecureContext) { setLocationMessage('Live location requires a secure HTTPS connection.'); return }
+    if (locationWatch.current !== null) navigator.geolocation.clearWatch(locationWatch.current)
+    const trackingNumber = selected.trackingNumber
+    setError('')
+    setSharingLocation(true)
+    setLocationMessage('Waiting for this device’s location permission…')
+    locationWatch.current = navigator.geolocation.watchPosition(async geo => {
+      const now = Date.now()
+      if (now - lastPositionSentAt.current < 15000) return
+      lastPositionSentAt.current = now
+      try {
+        const response = await fetch('/api/admin/position', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackingNumber, latitude: geo.coords.latitude, longitude: geo.coords.longitude, accuracy: geo.coords.accuracy }),
+        })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload.error || 'Could not publish this location.')
+        setLocationMessage(`Sharing location for ${trackingNumber} · updated ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date())}. Keep this page open.`)
+      } catch (cause) {
+        setLocationMessage(cause instanceof Error ? cause.message : 'Location update failed. Check your connection and admin session.')
+      }
+    }, cause => {
+      if (locationWatch.current !== null) navigator.geolocation.clearWatch(locationWatch.current)
+      locationWatch.current = null
+      setSharingLocation(false)
+      const reason = cause.code === cause.PERMISSION_DENIED ? 'Location permission was denied. Allow location access in your browser settings and try again.' : cause.code === cause.TIMEOUT ? 'Could not get a location fix. Try again outdoors or near a window.' : 'Device location is unavailable. Check location services and try again.'
+      setLocationMessage(reason)
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 25000 })
+  }
+
+  useEffect(() => {
+    if (selected?.status === 'DELIVERED' && locationWatch.current !== null) stopLocationSharing()
+  }, [selected?.status])
 
   if (checking) return <PageFrame eyebrow="ADMIN CONTROL CENTER" title={<>Operations,<br/><span>at a glance.</span></>} description="Securely manage shipments and scan updates."><div className="admin-loading">Checking admin access…</div></PageFrame>
 
@@ -192,6 +257,7 @@ export default function AdminPage() {
           <div className="admin-detail-head"><span className={`status-pill status-${selected.status.toLowerCase()}`}><i/>{label(selected.status)}</span><h2>{selected.trackingNumber}</h2><p>{label(selected.serviceType)} · {selected.weightKg} kg</p></div>
           <div className="admin-route"><div><small>ORIGIN</small><b>{selected.senderCity}</b><span>{selected.senderCountry}</span></div><ArrowRight size={16}/><div><small>DESTINATION</small><b>{selected.receiverCity}</b><span>{selected.receiverCountry}</span></div></div>
           <section className="admin-detail-map"><div className="admin-subhead"><b><MapPin size={14}/> Latest scan location</b><small>Scan-based</small></div>{mapLatitude != null && mapLongitude != null ? <iframe title={`Latest scan map for ${selected.trackingNumber}`} loading="lazy" src={mapSrc(mapLatitude, mapLongitude)}/> : <div className="admin-map-empty">Add scan coordinates to show a map location.</div>}<span>{latest?.location ?? `${selected.senderCity}, ${selected.senderCountry}`}</span></section>
+          <section className="admin-location-share"><div className="admin-subhead"><b><MapPin size={14}/> Live vehicle location</b><small>{sharingLocation ? 'Sharing' : 'On demand'}</small></div><p>Use a dispatcher or driver phone. Allow location access and keep this admin page open; customers see updates on their tracking page.</p>{locationMessage && <small className="admin-location-message">{locationMessage}</small>}{sharingLocation ? <button type="button" className="admin-toolbar-button stop-sharing" onClick={stopLocationSharing}>Stop location sharing</button> : <button type="button" className="button button-accent small" disabled={selected.status === 'DELIVERED'} onClick={startLocationSharing}>{selected.status === 'DELIVERED' ? 'Shipment delivered' : 'Start live location'}</button>}</section>
           <form className="admin-scan-form" onSubmit={addScan}><div className="admin-subhead"><b><Activity size={14}/> Publish tracking update</b><small>Creates a timestamped scan</small></div>
             <label>NEW STATUS<select required value={scan.status} onChange={e => setScan({ ...scan, status: e.target.value })}>{statuses.map(status => <option key={status} value={status}>{label(status)}</option>)}</select></label>
             <label>LOCATION<input required value={scan.location} onChange={e => setScan({ ...scan, location: e.target.value })} placeholder="City, country or facility"/></label>

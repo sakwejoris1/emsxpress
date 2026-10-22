@@ -18,11 +18,13 @@ No sample shipments, quotes, or service locations are seeded. Add operational re
 - `/locations` searches active service locations entered by an administrator and displays their verified coordinates on OpenStreetMap.
 - `/contact` and collection requests save inquiries in the admin support inbox with their selected route/category.
 - `/dashboard` shows the signed-in account's actual shipment and invoice records and accepts a CSV manifest. Invoice totals are generated from rated shipments.
-- `/tracking` reads shipment events from PostgreSQL and refreshes every 30 seconds. It displays the latest recorded scan location or, when available, the latest GPS/device position.
+- `/tracking` reads shipment events from PostgreSQL and refreshes every 30 seconds. It displays a recent GPS/device position when available, and falls back to the latest scan location otherwise. Customers can look up a shipment with its tracking number; no account is required.
 
 ### GPS/device feed
 
-No carrier or GPS provider is connected by default. A device or trusted integration can post the latest coordinates to `POST /api/dispatch/location` with the server-only `x-dispatch-key` matching `DISPATCH_API_KEY`:
+No carrier feed is connected by default. Dispatchers can share a driver's phone location from the admin UI: open `/admin` on the phone over HTTPS, sign in, select the shipment, choose **Start live location**, and allow browser location access. Keep the page open while the parcel is moving and choose **Stop location sharing** when the trip ends. The browser route is protected by the admin session and never receives the dispatch API key. Customer tracking refreshes the latest position every 30 seconds.
+
+A GPS device or trusted carrier integration can also post coordinates to `POST /api/dispatch/location` with the server-only `x-dispatch-key` matching `DISPATCH_API_KEY`:
 
 ```sh
 curl -X POST https://YOUR_DOMAIN/api/dispatch/location \
@@ -31,7 +33,7 @@ curl -X POST https://YOUR_DOMAIN/api/dispatch/location \
   -d '{"trackingNumber":"EMS-TRACKING-NUMBER","latitude":40.7128,"longitude":-74.006,"timestamp":"2026-10-16T12:00:00Z","source":"vehicle-device-17"}'
 ```
 
-The endpoint updates the shipment's current position without adding GPS pings to the scan timeline. Older pings are ignored. The map reflects a position only after a real integration sends it; until then, it shows scan coordinates when available.
+Both location paths update the shipment's current position without adding GPS pings to the scan timeline. The API-key integration ignores older pings. Until a dispatcher starts sharing or a GPS integration sends data, the map shows scan coordinates when available.
 
 ### Dispatch scans and shipments
 

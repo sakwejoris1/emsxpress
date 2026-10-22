@@ -19,6 +19,10 @@
       "destination": "/api/admin/operations?resource=invoices"
     },
     {
+      "source": "/api/admin/position",
+      "destination": "/api/admin/operations?resource=position"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
